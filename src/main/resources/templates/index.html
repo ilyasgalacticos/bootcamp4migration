@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:layout = "http://ultraq.net.nz/thymeleaf/layout"
+      xmlns:th = "http://www.thymeleaf.org"
+      xmlns:sec = "http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      layout:decorate = "main_layout.html">
+
+    <div layout:fragment = "content">
+        <div class="row mb-5" sec:authorize = "hasAnyAuthority('ROLE_ADMIN')">
+            <div class="col-6 mx-auto">
+                <div class="row">
+                    <div class="col-12">
+                        <label>TITLE : </label>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <input type="text" class="form-control" id="postTitle" placeholder="Title : ">
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <label>CONTENT : </label>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <textarea class="form-control" id="postContent" placeholder="Content : " rows="5"></textarea>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button onclick="createPost()" class="btn btn-success">CREATE POST</button>
+                    </div>
+                </div>
+                <div class="modal fade" id="editNewsModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h1 class="modal-title fs-5" id="staticBackdropLabel">Modal title</h1>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <input type="hidden" id = "editPostId">
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <label>TITLE : </label>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-2">
+                                            <div class="col-12">
+                                                <input type="text" class="form-control" id="editPostTitle" placeholder="Title : ">
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-12">
+                                                <label>CONTENT : </label>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-2">
+                                            <div class="col-12">
+                                                <textarea class="form-control" id="editPostContent" placeholder="Content : " rows="5"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-primary" onclick="saveNews()">SAVE</button>
+                                <button type="button" class="btn btn-danger" onclick="deleteNews()">DELETE</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <script type="text/javascript">
+
+                    var modal = new bootstrap.Modal(document.getElementById('editNewsModal'));
+
+                    function createPost(){
+                        const request = new XMLHttpRequest();
+                        request.onreadystatechange = function (){
+                            if(request.readyState===request.DONE){
+                                if(request.status===200){
+                                    loadPosts();
+                                    postTitle.value = "";
+                                    postContent.value = "";
+                                }
+                            }
+                        }
+
+                        let jsonBody = {"title": postTitle.value, "content": postContent.value};
+                        request.open("POST", "/api/post");
+                        request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+                        request.send(JSON.stringify(jsonBody));
+                    }
+
+                    function openEditNewsModal(newsId){
+
+                        const request = new XMLHttpRequest();
+                        request.onreadystatechange = function (){
+                            if(request.readyState === request.DONE){
+                                if(request.status === 200){
+                                    let result = JSON.parse(request.responseText);
+                                    let editPostId = document.getElementById("editPostId");
+                                    let editPostTitle = document.getElementById("editPostTitle");
+                                    let editPostContent = document.getElementById("editPostContent");
+                                    editPostId.value = result.id;
+                                    editPostTitle.value = result.title;
+                                    editPostContent.value = result.content;
+                                    modal.show();
+                                }
+                            }
+                        }
+                        request.open("GET", "/api/post/"+newsId);
+                        request.send();
+                    }
+
+                    function saveNews(){
+
+                        const request = new XMLHttpRequest();
+                        request.onreadystatechange = function (){
+                            if(request.readyState===request.DONE){
+                                if(request.status===200){
+                                    loadPosts();
+                                    modal.hide();
+                                }
+                            }
+                        }
+
+                        let editPostId = document.getElementById("editPostId");
+                        let editPostTitle = document.getElementById("editPostTitle");
+                        let editPostContent = document.getElementById("editPostContent");
+
+                        let jsonBody = {"id": editPostId.value,"title": editPostTitle.value, "content": editPostContent.value};
+
+                        request.open("PUT", "/api/post");
+                        request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+                        request.send(JSON.stringify(jsonBody));
+                    }
+
+                    function deleteNews(){
+                        let conf = confirm("ARE YOU SURE?");
+                        if(conf){
+                            const request = new XMLHttpRequest();
+                            request.onreadystatechange = function (){
+                                if(request.readyState===request.DONE){
+                                    if(request.status===200){
+                                        loadPosts();
+                                        modal.hide();
+                                    }
+                                }
+                            }
+
+                            let editPostId = document.getElementById("editPostId");
+
+                            request.open("DELETE", "/api/post/"+editPostId.value);
+                            request.send();
+                        }
+                    }
+                </script>
+            </div>
+        </div>
+        <div id = "posts">
+        </div>
+        <input type="hidden" value = "true" sec:authorize = "hasAnyAuthority('ROLE_ADMIN')" id = "isAdmin">
+        <script type="text/javascript">
+
+            loadPosts();
+
+            function loadPosts(){
+                const request = new XMLHttpRequest();
+                request.onreadystatechange = function (){
+                    if(request.readyState === request.DONE){
+                        if(request.status === 200){
+                            // console.log(request.responseText); this is JSON as a String
+                            let postList = JSON.parse(request.responseText);
+                            let htmlCode = "";
+                            let admin = false;
+                            let isAdmin = document.getElementById("isAdmin");
+                            if(isAdmin!=null&&isAdmin.value){
+                                admin = true;
+                            }
+                            for(let i=0;i<postList.length;i++){
+                                htmlCode+="<div class = 'container p-3 mb-3' style='background-color: rgba(221,233,253,0.92);'>";
+                                htmlCode+="<h3>"+postList[i].title+"</h3>";
+                                htmlCode+="<section><p>"+postList[i].content+"</p></section>";
+                                htmlCode+="<p>Posted by : <strong>"+postList[i].author.fullName+"</strong></p>";
+                                if(admin){
+                                    htmlCode+="<a class = 'btn btn-link' href='JavaScript:void(0)' onclick='openEditNewsModal("+postList[i].id+")'>EDIT</a>";
+                                }
+                                htmlCode+="</div>";
+                            }
+                            posts.innerHTML = htmlCode;
+                        }
+                    }
+                }
+                request.open("GET", "/api/post"); // <form action = "/api/post" method = "GET">
+                request.send(); // You clicked to submit button
+            }
+
+        </script>
+    </div>
+</html>
